@@ -1,0 +1,104 @@
+# MADO ingestion を GitHub のサーバー上で実行するワークフロー。
+# ローカルPCにPythonをインストールせず、ブラウザ操作だけで収集→索引→コミットまで完結します。
+#
+# 使い方:
+#   1. リポジトリの Settings → Secrets and variables → Actions → New repository secret で
+#      YOUTUBE_API_KEY と GEMINI_API_KEY を登録
+#   2. Actions タブ → "MADO Ingestion" → Run workflow
+#      まず channel_limit=2, videos_per_channel=20 でテスト → 成功したら空欄(全件)で本番実行
+#   3. 完了すると data/(chroma索引+カタログ)が自動コミットされ、
+#      Streamlit Cloud が自動で再デプロイされます
+
+name: MADO Ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel_limit:
+        description: "先頭Nチャンネルのみ(空欄=全8チャンネル)"
+        required: false
+        default: ""
+      videos_per_channel:
+        description: "各チャンネルN本のみ(空欄=全動画)"
+        required: false
+        default: ""
+      skip_tags:
+        description: "国・分野タグ付けを省略(最速で動かす場合 true)"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 19 * * *"   # 毎日 19:00 UTC = 日本時間 午前4時 に差分クロール
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mado-ingestion
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350    # 全件のタグ付け込みでも収まる上限(6時間制限の手前)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies (CPU torch)
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-minilm-multilingual-v1
+
+      - name: Run pipeline (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          ARGS=""
+          [ -n "${{ inputs.channel_limit }}" ] && ARGS="$ARGS --channel-limit ${{ inputs.channel_limit }}"
+          [ -n "${{ inputs.videos_per_channel }}" ] && ARGS="$ARGS --videos-per-channel ${{ inputs.videos_per_channel }}"
+          [ "${{ inputs.skip_tags }}" = "true" ] && ARGS="$ARGS --skip-tags"
+          python ingestion/run_pipeline.py $ARGS
+
+      - name: Run recrawl (scheduled)
+        if: github.event_name == 'schedule'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python ingestion/recrawl.py
+
+      - name: Report index size
+        run: |
+          du -sh data/chroma || true
+          echo "--- 100MBを超える単一ファイルがあると通常pushは失敗します(下のLFS手順参照) ---"
+          find data -size +95M -exec ls -lh {} \; || true
+
+      - name: Commit index back to repo
+        run: |
+          git config user.name  "mado-ingestion-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -f data/
+          git diff --cached --quiet && echo "変更なし" && exit 0
+          git commit -m "chore: update video index ($(date -u +%Y-%m-%d))"
+          git pull --rebase origin ${GITHUB_REF_NAME}
+          git push
+
+      # --- data/chroma 内に100MB超のファイルが生じてpushが失敗した場合 ---
+      # 上の "Commit index back to repo" ステップの先頭に以下3行を追加して再実行:
+      #   sudo apt-get install -y git-lfs && git lfs install
+      #   git lfs track "data/chroma/**"
+      #   git add .gitattributes
+      # ※ Streamlit Cloud側でLFSが扱えない場合は、READMEに記載の
+      #    Hugging Face Datasets 方式(起動時ダウンロード)に切り替えてください。

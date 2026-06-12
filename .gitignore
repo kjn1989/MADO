@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+# data/raw/ は収集キャッシュとしてコミットする(GitHub Actionsの差分クロールが
+# 字幕の再取得をスキップできるため)。秘匿情報は含まれない。
+# data/chroma/ はデプロイのため「コミットする」(README参照)。
+# サイズが大きい場合は Git LFS を使用: git lfs track "data/chroma/**"

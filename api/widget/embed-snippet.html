@@ -1,0 +1,11 @@
+<!-- MADO チャットウィジェット組み込みスニペット(第2段階)
+     JICA HP (jica.go.jp) の共通フッターテンプレート等、</body> 直前に1行追加するだけ。
+     data-api には MADO API のチャットエンドポイントURLを指定。 -->
+
+<script src="https://mado.example.org/widget/mado-widget.js"
+        data-api="https://mado.example.org/api/chat" defer></script>
+
+<!-- ローカル動作確認(uvicorn api.main:app 起動後):
+<script src="http://localhost:8000/widget/mado-widget.js"
+        data-api="http://localhost:8000/api/chat" defer></script>
+-->

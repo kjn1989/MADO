@@ -1,0 +1,14 @@
+# --- MADO Streamlit prototype ---
+streamlit>=1.39
+chromadb>=0.5.5
+sentence-transformers>=3.0
+google-generativeai>=0.8.3
+google-api-python-client>=2.140
+youtube-transcript-api>=0.6.2
+python-dotenv>=1.0
+pyyaml>=6.0
+numpy>=1.26
+
+# Streamlit Community Cloud / 省メモリ環境向け:
+# torch は CPU 版を明示インストールすると軽量です(README参照)
+torch>=2.2
