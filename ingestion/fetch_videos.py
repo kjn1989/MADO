@@ -97,6 +97,14 @@ def fetch_playlist_videos(api, ch: dict, limit: int | None = None) -> list[dict]
             return videos
 
 
+def _load_existing(out: str) -> dict[str, dict]:
+    """既存 videos.json を {video_id: video} として読み込む(無ければ空)。"""
+    if not os.path.exists(out):
+        return {}
+    with open(out, encoding="utf-8") as f:
+        return {v["video_id"]: v for v in json.load(f)}
+
+
 def main(channel_limit: int | None = None, videos_per_channel: int | None = None):
     os.makedirs(RAW, exist_ok=True)
     api = yt()
@@ -105,21 +113,25 @@ def main(channel_limit: int | None = None, videos_per_channel: int | None = None
     if channel_limit:
         channels = channels[:channel_limit]
 
-    all_videos = []
+    # 既存分にマージしながらチャンネルごとに途中保存する。
+    # 全件(8ch)取得が途中で中断しても、取得済みチャンネルを失わず再開できる。
+    out = os.path.join(RAW, "videos.json")
+    by_id = _load_existing(out)
+    before = len(by_id)
     for ch in channels:
         print(f"[channel] {ch['name']}")
         info = resolve_channel(api, ch)
         if not info:
             continue
         vids = fetch_playlist_videos(api, info, videos_per_channel)
-        print(f"  → {len(vids)} 本取得")
-        all_videos.extend(vids)
+        for v in vids:
+            by_id[v["video_id"]] = v
+        with open(out, "w", encoding="utf-8") as f:   # チャンネルごとに途中保存
+            json.dump(list(by_id.values()), f, ensure_ascii=False, indent=1)
+        print(f"  → {len(vids)} 本取得(累計 {len(by_id)} 本)")
         time.sleep(0.3)
 
-    out = os.path.join(RAW, "videos.json")
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(all_videos, f, ensure_ascii=False, indent=1)
-    print(f"\n合計 {len(all_videos)} 本 → {out}")
+    print(f"\n合計 {len(by_id)} 本(新規 {len(by_id) - before} 本)→ {out}")
 
 
 if __name__ == "__main__":
