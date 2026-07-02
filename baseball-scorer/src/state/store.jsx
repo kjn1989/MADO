@@ -378,9 +378,11 @@ export function reducer(state, action) {
       if (p.batterTo === 4) {
         batterScored = true;
         addRun(g, { playerId: myBatting ? batter?.playerId : null, viaError: p.result === 'error' && p.unearnedBatter !== false, erChoice: null });
-      } else if (p.batterTo === 'out' || !resultDef?.onBase) {
-        if (resultDef && !resultDef.onBase) g.outs += 1;
-        if (p.batterTo === 'out' && resultDef?.onBase) g.outs += 1; // 例: 単打後に二塁を狙ってアウト
+      } else if (p.batterTo === 'out') {
+        g.outs += 1; // 明示的な打者アウト(凡打、単打後の走塁死など)
+      } else if (typeof p.batterTo !== 'number' && resultDef && !resultDef.onBase) {
+        g.outs += 1; // 出塁しない結果(三振・犠打等)のデフォルト
+        // ※振り逃げ等で batterTo に塁が指定された場合はアウトにしない
       }
       if (typeof p.batterTo === 'number' && p.batterTo >= 1 && p.batterTo <= 3) {
         g.runners[p.batterTo] = {
