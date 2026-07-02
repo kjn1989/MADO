@@ -234,6 +234,14 @@ export function reducer(state, action) {
       g.updatedAt = Date.now();
       return { ...state, games: { ...state.games, [g.id]: g }, history: pushHistory(state, action) };
     }
+    case 'SET_POSITION': {
+      // 守備位置のみ変更(交代を伴わない)
+      const g = deep(state.games[action.gameId]);
+      const slot = g.lineup.find((l) => l.order === action.order);
+      if (slot) slot.position = action.position;
+      g.updatedAt = Date.now();
+      return { ...state, games: { ...state.games, [g.id]: g } };
+    }
     case 'SET_BATTER_INDEX': {
       const g = deep(state.games[action.gameId]);
       g.batterIndex = action.index;

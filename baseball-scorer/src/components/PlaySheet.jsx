@@ -32,6 +32,13 @@ export default function PlaySheet({ game, initial, batterName, onClose }) {
   const [batterTo, setBatterTo] = useState(initial.batterTo ?? proposal.batterTo);
   const [rbiOverride, setRbiOverride] = useState(null);
   const [advOverride, setAdvOverride] = useState(null);
+  // 守備時: 自責点の帰属(継投跨ぎ走者) と 非自責フラグ
+  const [erChoices, setErChoices] = useState({}); // { base: pitcherId }
+  const [unearned, setUnearned] = useState(() => {
+    const u = {};
+    for (const b of [1, 2, 3]) if (game.runners[b]?.viaError) u[b] = true;
+    return u;
+  });
 
   const needsDir = NEEDS_DIRECTION.includes(result);
 
@@ -69,6 +76,15 @@ export default function PlaySheet({ game, initial, batterName, onClose }) {
     return `${dir}${ot}${result === 'out' ? '' : def.label}${runs ? `・${runs}点` : ''}`;
   };
 
+  // 守備時: 生還する走者のうち継投を跨いだ走者(前投手の責任走者)
+  const scoringBases = moves.filter((m) => m.to === 4).map((m) => m.from);
+  const inheritedScoring = !myBatting
+    ? scoringBases.filter((b) => {
+        const r = game.runners[b];
+        return r?.pitcherId && r.pitcherId !== game.currentPitcherId;
+      })
+    : [];
+
   const confirm = () => {
     dispatch({
       type: 'CONFIRM_PLAY',
@@ -82,6 +98,8 @@ export default function PlaySheet({ game, initial, batterName, onClose }) {
         batterTo,
         rbi: rbiOverride !== null ? rbiOverride : undefined,
         advSuccess: isAdvTarget ? advSuccess : undefined,
+        erChoices,
+        unearnedRuns: unearned,
       },
     });
     onClose();
@@ -186,6 +204,48 @@ export default function PlaySheet({ game, initial, batterName, onClose }) {
           </button>
           {advOverride === null && <span className="pill">自動判定</span>}
         </div>
+      )}
+
+      {!myBatting && scoringBases.length > 0 && (
+        <>
+          <div className="section-title">失点の記録 (自責点の帰属)</div>
+          {scoringBases.map((b) => {
+            const r = game.runners[b];
+            const prevPid = r?.pitcherId;
+            const isInherited = inheritedScoring.includes(b);
+            const chosen = erChoices[b] || prevPid || game.currentPitcherId;
+            return (
+              <div key={b} className="card" style={{ padding: 10, marginBottom: 8 }}>
+                <div className="small" style={{ marginBottom: 6 }}>
+                  {['', '一', '二', '三'][b]}塁走者の生還
+                  {isInherited && <span className="pill amber" style={{ marginLeft: 6 }}>継投跨ぎ</span>}
+                </div>
+                {isInherited && (
+                  <div className="grid2" style={{ marginBottom: 6 }}>
+                    <button
+                      className={`small ${chosen === prevPid ? 'primary' : ''}`}
+                      onClick={() => setErChoices({ ...erChoices, [b]: prevPid })}
+                    >
+                      前投手: {nameOf(prevPid)}
+                    </button>
+                    <button
+                      className={`small ${chosen === game.currentPitcherId ? 'primary' : ''}`}
+                      onClick={() => setErChoices({ ...erChoices, [b]: game.currentPitcherId })}
+                    >
+                      現投手: {nameOf(game.currentPitcherId)}
+                    </button>
+                  </div>
+                )}
+                <button
+                  className={`small ${unearned[b] ? 'danger' : 'ghost'}`}
+                  onClick={() => setUnearned({ ...unearned, [b]: !unearned[b] })}
+                >
+                  {unearned[b] ? '✓ 非自責(失策絡み)' : '自責点として記録'}
+                </button>
+              </div>
+            );
+          })}
+        </>
       )}
 
       {collision && <div className="warn-box mt12">⚠️ 複数の走者が同じ塁に到達しています。行き先を修正してください。</div>}
