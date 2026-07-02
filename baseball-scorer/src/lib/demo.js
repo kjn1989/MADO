@@ -147,6 +147,7 @@ export function generateDemoData() {
     starter.hitByPitch = rand() < 0.3 ? 1 : 0;
     starter.strikeouts = 3 + Math.floor(rand() * 5);
     starter.pitches = 70 + Math.floor(rand() * 30);
+    starter.abFaced = 15 + starter.hitsAllowed; // アウト15+被安打(近似)
     starter.win = myScore > oppScore;
 
     const reliever = newPitchingRecord({ gameId: g.id, playerId: players[9 + (gi % 3)].id, appearanceOrder: 2 });
@@ -157,7 +158,9 @@ export function generateDemoData() {
     reliever.walks = Math.floor(rand() * 2);
     reliever.strikeouts = 1 + Math.floor(rand() * 3);
     reliever.pitches = 20 + Math.floor(rand() * 15);
+    reliever.abFaced = 6 + reliever.hitsAllowed;
     reliever.save = myScore > oppScore && myScore - oppScore <= 3;
+    reliever.hold = !reliever.save && myScore > oppScore;
     g.pitchingRecords = [starter, reliever];
     games.push(g);
   }

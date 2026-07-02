@@ -95,8 +95,8 @@ export function aggregatePitching(games) {
       map[pid] = {
         playerId: pid,
         outsRecorded: 0, runs: 0, earnedRuns: 0, hitsAllowed: 0,
-        walks: 0, hitByPitch: 0, strikeouts: 0, pitches: 0,
-        wins: 0, saves: 0, games: 0,
+        walks: 0, hitByPitch: 0, strikeouts: 0, pitches: 0, abFaced: 0,
+        wins: 0, saves: 0, holds: 0, games: 0,
       };
     }
     return map[pid];
@@ -113,8 +113,10 @@ export function aggregatePitching(games) {
       s.hitByPitch += pr.hitByPitch || 0;
       s.strikeouts += pr.strikeouts || 0;
       s.pitches += pr.pitches || 0;
+      s.abFaced += pr.abFaced || 0;
       if (pr.win) s.wins += 1;
       if (pr.save) s.saves += 1;
+      if (pr.hold) s.holds += 1;
     }
   }
   return map;
@@ -137,6 +139,7 @@ export const PITCHING_TITLES = [
   { key: 'wins', label: '勝利', crown: '最多勝' },
   { key: 'strikeouts', label: '奪三振', crown: '奪三振王' },
   { key: 'saves', label: 'セーブ', crown: 'セーブ王' },
+  { key: 'holds', label: 'ホールド', crown: 'ホールド王' },
   { key: 'ip', label: '投球回', crown: 'イニング王' },
 ];
 
@@ -201,7 +204,8 @@ export function pitchingMetrics(s) {
   const kbb = s.walks > 0 ? s.strikeouts / s.walks : null;
   const kbbDisplay = s.walks > 0 ? fmt2(kbb) : s.strikeouts > 0 ? `${s.strikeouts} (与四球0)` : '-';
   const kbbSort = s.walks > 0 ? kbb : s.strikeouts > 0 ? s.strikeouts : -1;
-  return { ip, era7, whip, kbb, kbbDisplay, kbbSort };
+  const oba = div(s.hitsAllowed, s.abFaced); // 被打率 = 被安打 ÷ 被打数
+  return { ip, era7, whip, kbb, kbbDisplay, kbbSort, oba };
 }
 
 // ---- 詳細ランキングのメトリクス定義 ----
@@ -218,6 +222,12 @@ export const DETAIL_METRICS = [
     value: (m) => m.risp, format: fmtAvg,
     detail: (s) => `${s.rispH}安打/${s.rispAB}打数`,
     qualify: (s) => s.rispAB > 0,
+  },
+  {
+    key: 'obp', label: '出塁率', type: 'bat', higherBetter: true,
+    value: (m) => m.obp, format: fmtAvg,
+    detail: (s) => `安打${s.h}+四死球${s.bb + s.hbp}/${s.ab + s.bb + s.hbp + s.sacFly}`,
+    qualify: (s) => s.ab + s.bb + s.hbp + s.sacFly > 0,
   },
   {
     key: 'ops', label: 'OPS', type: 'bat', higherBetter: true,
@@ -267,6 +277,24 @@ export const DETAIL_METRICS = [
     detail: (s) => `奪三振${s.strikeouts}/与四球${s.walks}`,
     qualify: (s) => s.outsRecorded > 0 && (s.strikeouts > 0 || s.walks > 0),
   },
+  {
+    key: 'oba', label: '被打率', type: 'pit', higherBetter: false,
+    value: (m) => m.oba, format: fmtAvg,
+    detail: (s) => `被安打${s.hitsAllowed}/被打数${s.abFaced}`,
+    qualify: (s) => s.abFaced > 0,
+  },
+  {
+    key: 'holds', label: 'ホールド', type: 'pit', higherBetter: true,
+    value: (m, s) => s.holds, format: (v) => (v === null ? '-' : String(v)),
+    detail: (s) => `${s.games}登板`,
+    qualify: (s) => s.holds > 0,
+  },
+  {
+    key: 'saves', label: 'セーブ', type: 'pit', higherBetter: true,
+    value: (m, s) => s.saves, format: (v) => (v === null ? '-' : String(v)),
+    detail: (s) => `${s.games}登板`,
+    qualify: (s) => s.saves > 0,
+  },
 ];
 
 // 指定メトリクスのランキング行を作る
@@ -276,7 +304,7 @@ export function detailRanking(metricDef, battingMap, pitchingMap) {
   for (const s of Object.values(src)) {
     if (!metricDef.qualify(s)) continue;
     const m = metricDef.type === 'bat' ? battingMetrics(s) : pitchingMetrics(s);
-    const v = metricDef.value(m);
+    const v = metricDef.value(m, s);
     if (v === null || v === undefined) continue;
     rows.push({
       playerId: s.playerId,

@@ -130,8 +130,10 @@ export function newPitchingRecord({ gameId, playerId, appearanceOrder }) {
     hitByPitch: 0, // 与死球
     strikeouts: 0, // 奪三振
     pitches: 0, // 投球数
+    abFaced: 0, // 被打数(相手の打数: 被打率の分母)
     win: false,
     save: false,
+    hold: false, // ホールド
     ts: Date.now(),
   };
 }

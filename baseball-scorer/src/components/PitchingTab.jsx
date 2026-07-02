@@ -33,6 +33,12 @@ function RecordCard({ game, pr }) {
         >
           S
         </button>
+        <button
+          className={`small ${pr.hold ? 'primary' : 'ghost'}`}
+          onClick={() => dispatch({ type: 'SET_DECISION', gameId: game.id, recordId: pr.id, decision: 'hold', value: !pr.hold, exclusive: false })}
+        >
+          H
+        </button>
       </div>
 
       <div className="grid3 mt12 center small">
@@ -63,6 +69,7 @@ function RecordCard({ game, pr }) {
             ['outsRecorded', '投球回(1/3単位)', (v) => formatIP(v)],
             ['runs', '失点', String],
             ['hitsAllowed', '被安打', String],
+            ['abFaced', '被打数(被打率の分母)', String],
             ['walks', '与四球', String],
             ['hitByPitch', '与死球', String],
             ['strikeouts', '奪三振', String],
@@ -103,8 +110,8 @@ function PitchingSummary() {
             <table className="rank-table" style={{ minWidth: 520 }}>
               <thead>
                 <tr>
-                  <th>投手</th><th>回</th><th>防御率</th><th>WHIP</th><th>奪三振</th>
-                  <th>与四死</th><th>被安</th><th>自責</th><th>勝</th><th>S</th>
+                  <th>投手</th><th>回</th><th>防御率</th><th>被打率</th><th>WHIP</th><th>奪三振</th>
+                  <th>与四死</th><th>被安</th><th>自責</th><th>勝</th><th>S</th><th>H</th>
                 </tr>
               </thead>
               <tbody>
@@ -115,6 +122,7 @@ function PitchingSummary() {
                       <td>{nameOf(s.playerId)}</td>
                       <td className="num">{formatIP(s.outsRecorded)}</td>
                       <td className="num">{m.era7 === null ? '-' : m.era7.toFixed(2)}</td>
+                      <td className="num">{m.oba === null ? '-' : m.oba.toFixed(3).replace(/^0\./, '.')}</td>
                       <td className="num">{m.whip === null ? '-' : m.whip.toFixed(2)}</td>
                       <td className="num">{s.strikeouts}</td>
                       <td className="num">{s.walks + s.hitByPitch}</td>
@@ -122,6 +130,7 @@ function PitchingSummary() {
                       <td className="num">{s.earnedRuns}</td>
                       <td className="num">{s.wins}</td>
                       <td className="num">{s.saves}</td>
+                      <td className="num">{s.holds}</td>
                     </tr>
                   );
                 })}

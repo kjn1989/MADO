@@ -285,11 +285,13 @@ export function reducer(state, action) {
       return { ...state, games: { ...state.games, [g.id]: g } };
     }
     case 'SET_DECISION': {
-      // 勝利投手/セーブの付与
+      // 勝利投手/セーブ/ホールドの付与 (win/saveは1試合1人=exclusive、holdは複数可)
       const g = deep(state.games[action.gameId]);
+      const field = { win: 'win', save: 'save', hold: 'hold' }[action.decision];
+      if (!field) return state;
       for (const pr of g.pitchingRecords) {
-        if (action.decision === 'win') pr.win = pr.id === action.recordId ? action.value : (action.exclusive ? false : pr.win);
-        if (action.decision === 'save') pr.save = pr.id === action.recordId ? action.value : (action.exclusive ? false : pr.save);
+        if (pr.id === action.recordId) pr[field] = action.value;
+        else if (action.exclusive) pr[field] = false;
       }
       g.updatedAt = Date.now();
       return { ...state, games: { ...state.games, [g.id]: g } };
@@ -441,6 +443,7 @@ export function reducer(state, action) {
       if (!myBatting && g.currentPitcherId) {
         const pr = ensurePitchingRecord(g, g.currentPitcherId);
         if (resultDef?.hit) pr.hitsAllowed += 1;
+        if (resultDef?.ab) pr.abFaced = (pr.abFaced || 0) + 1; // 被打数(被打率の分母)
         if (p.result === 'bb') pr.walks += 1;
         if (p.result === 'hbp') pr.hitByPitch += 1;
         if (p.result === 'so') pr.strikeouts += 1;

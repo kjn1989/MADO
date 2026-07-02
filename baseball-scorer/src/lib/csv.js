@@ -40,15 +40,16 @@ export function battingCSV(games, nameOf) {
 export function pitchingCSV(games, nameOf) {
   const stats = aggregatePitching(games);
   const rows = [[
-    '投手', '登板', '投球回', '投球数', '失点', '自責点', '被安打', '与四球', '与死球', '奪三振',
-    '勝利', 'セーブ', '防御率(7回換算)', 'WHIP', 'K/BB',
+    '投手', '登板', '投球回', '投球数', '失点', '自責点', '被安打', '被打数', '与四球', '与死球', '奪三振',
+    '勝利', 'セーブ', 'ホールド', '防御率(7回換算)', '被打率', 'WHIP', 'K/BB',
   ]];
   for (const s of Object.values(stats).sort((a, b) => b.outsRecorded - a.outsRecorded)) {
     const m = pitchingMetrics(s);
     rows.push([
       nameOf(s.playerId), s.games, formatIP(s.outsRecorded), s.pitches, s.runs, s.earnedRuns,
-      s.hitsAllowed, s.walks, s.hitByPitch, s.strikeouts, s.wins, s.saves,
-      m.era7 === null ? '-' : m.era7.toFixed(2), m.whip === null ? '-' : m.whip.toFixed(2), m.kbbDisplay,
+      s.hitsAllowed, s.abFaced, s.walks, s.hitByPitch, s.strikeouts, s.wins, s.saves, s.holds,
+      m.era7 === null ? '-' : m.era7.toFixed(2), fmtAvg(m.oba),
+      m.whip === null ? '-' : m.whip.toFixed(2), m.kbbDisplay,
     ]);
   }
   return toCSV(rows);
