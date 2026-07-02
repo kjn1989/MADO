@@ -167,3 +167,123 @@ export function rankRows(rows) {
     return { ...r, rank };
   });
 }
+
+// ============================================================
+// 10大メトリクス (分母0は null を返し、表示側で「-」にする)
+// ============================================================
+const div = (a, b) => (b > 0 ? a / b : null);
+
+export const fmtAvg = (v) => (v === null ? '-' : v.toFixed(3).replace(/^0\./, '.'));
+export const fmtPct = (v) => (v === null ? '-' : (v * 100).toFixed(1) + '%');
+export const fmt2 = (v) => (v === null ? '-' : v.toFixed(2));
+
+// ---- 打者メトリクス ----
+export function battingMetrics(s) {
+  const ba = div(s.h, s.ab); // 1. 打率 (AB = 打席 − 四死球・犠打・犠飛・打撃妨害)
+  const risp = div(s.rispH, s.rispAB); // 2. 得点圏打率
+  const obpDen = s.ab + s.bb + s.hbp + s.sacFly;
+  const obp = div(s.h + s.bb + s.hbp, obpDen);
+  const slg = div(s.tb, s.ab);
+  const ops = obp === null || slg === null ? null : obp + slg; // 3. OPS
+  const adv = div(s.advSuccess, s.advChance); // 4. 進塁打成功率
+  const ppa = div(s.totalPitches, s.pa); // 5. P/PA
+  const clutch = s.clutch; // 6. クラッチ打数(カウント)
+  const fhit = div(s.firstPitchHits, s.firstPitchSwings); // 7. 初球安打率
+  return { ba, risp, obp, slg, ops, adv, ppa, clutch, fhit };
+}
+
+// ---- 投手メトリクス ----
+export function pitchingMetrics(s) {
+  const ip = s.outsRecorded / 3;
+  const era7 = ip > 0 ? (s.earnedRuns / ip) * 7 : null; // 8. 防御率(7回換算)
+  const whip = ip > 0 ? (s.hitsAllowed + s.walks + s.hitByPitch) / ip : null; // 9. WHIP(被安打+与四死球)
+  // 10. K/BB: 与四球0のときは奪三振数を表示し注記
+  const kbb = s.walks > 0 ? s.strikeouts / s.walks : null;
+  const kbbDisplay = s.walks > 0 ? fmt2(kbb) : s.strikeouts > 0 ? `${s.strikeouts} (与四球0)` : '-';
+  const kbbSort = s.walks > 0 ? kbb : s.strikeouts > 0 ? s.strikeouts : -1;
+  return { ip, era7, whip, kbb, kbbDisplay, kbbSort };
+}
+
+// ---- 詳細ランキングのメトリクス定義 ----
+// higherBetter=false のものは昇順で順位付け
+export const DETAIL_METRICS = [
+  {
+    key: 'ba', label: '打率', type: 'bat', higherBetter: true,
+    value: (m) => m.ba, format: fmtAvg,
+    detail: (s) => `${s.h}安打/${s.ab}打数`,
+    qualify: (s) => s.ab > 0,
+  },
+  {
+    key: 'risp', label: '得点圏打率', type: 'bat', higherBetter: true,
+    value: (m) => m.risp, format: fmtAvg,
+    detail: (s) => `${s.rispH}安打/${s.rispAB}打数`,
+    qualify: (s) => s.rispAB > 0,
+  },
+  {
+    key: 'ops', label: 'OPS', type: 'bat', higherBetter: true,
+    value: (m) => m.ops, format: (v, m) => (v === null ? '-' : v.toFixed(3)),
+    detail: (s, m) => `出塁率${fmtAvg(m.obp)} 長打率${fmtAvg(m.slg)}`,
+    qualify: (s) => s.ab > 0,
+  },
+  {
+    key: 'adv', label: '進塁打成功率', type: 'bat', higherBetter: true,
+    value: (m) => m.adv, format: fmtPct,
+    detail: (s) => `${s.advSuccess}成功/${s.advChance}機会`,
+    qualify: (s) => s.advChance > 0,
+  },
+  {
+    key: 'ppa', label: 'PPA (球/打席)', type: 'bat', higherBetter: true,
+    value: (m) => m.ppa, format: fmt2,
+    detail: (s) => `${s.totalPitches}球/${s.pa}打席`,
+    qualify: (s) => s.pa > 0,
+  },
+  {
+    key: 'clutch', label: 'クラッチ打数', type: 'bat', higherBetter: true,
+    value: (m) => m.clutch, format: (v) => (v === null ? '-' : String(v)),
+    detail: () => '先制・同点・逆転・勝ち越し打の合計',
+    qualify: (s) => s.pa > 0,
+  },
+  {
+    key: 'fhit', label: '初球安打率', type: 'bat', higherBetter: true,
+    value: (m) => m.fhit, format: fmtPct,
+    detail: (s) => `${s.firstPitchHits}安打/${s.firstPitchSwings}打席(初球打ち)`,
+    qualify: (s) => s.firstPitchSwings > 0,
+  },
+  {
+    key: 'era7', label: '防御率 (7回換算)', type: 'pit', higherBetter: false,
+    value: (m) => m.era7, format: fmt2,
+    detail: (s) => `自責${s.earnedRuns}/${formatIP(s.outsRecorded)}回`,
+    qualify: (s) => s.outsRecorded > 0,
+  },
+  {
+    key: 'whip', label: 'WHIP', type: 'pit', higherBetter: false,
+    value: (m) => m.whip, format: fmt2,
+    detail: (s) => `被安打${s.hitsAllowed}+四死球${s.walks + s.hitByPitch}/${formatIP(s.outsRecorded)}回`,
+    qualify: (s) => s.outsRecorded > 0,
+  },
+  {
+    key: 'kbb', label: 'K/BB', type: 'pit', higherBetter: true,
+    value: (m) => m.kbbSort, format: (v, m) => m.kbbDisplay,
+    detail: (s) => `奪三振${s.strikeouts}/与四球${s.walks}`,
+    qualify: (s) => s.outsRecorded > 0 && (s.strikeouts > 0 || s.walks > 0),
+  },
+];
+
+// 指定メトリクスのランキング行を作る
+export function detailRanking(metricDef, battingMap, pitchingMap) {
+  const src = metricDef.type === 'bat' ? battingMap : pitchingMap;
+  const rows = [];
+  for (const s of Object.values(src)) {
+    if (!metricDef.qualify(s)) continue;
+    const m = metricDef.type === 'bat' ? battingMetrics(s) : pitchingMetrics(s);
+    const v = metricDef.value(m);
+    if (v === null || v === undefined) continue;
+    rows.push({
+      playerId: s.playerId,
+      sortValue: metricDef.higherBetter ? v : -v,
+      display: metricDef.format(v, m),
+      detail: metricDef.detail(s, m),
+    });
+  }
+  return rankRows(rows);
+}
