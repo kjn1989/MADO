@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { useStore } from '../state/store.jsx';
+import { useStore, usePlayerName } from '../state/store.jsx';
+import { parseFirebaseConfig } from '../lib/cloud.js';
+import { battingCSV, pitchingCSV, playLogCSV, atBatCSV, downloadCSV, shareCSV } from '../lib/csv.js';
 
 export default function SettingsTab() {
   const { state, dispatch } = useStore();
@@ -85,13 +87,107 @@ export default function SettingsTab() {
         )}
       </div>
 
+      <CloudCard />
+      <ExportCard />
+
       <div className="card">
         <h2>データ管理</h2>
         <p className="small dim">
-          データはこの端末のブラウザ内(localStorage)に自動保存されます。
-          クラウド共有・CSV出力は後の段階で追加されます。
+          データはこの端末のブラウザ内(localStorage)に自動保存され、オフラインでも完全動作します。
+          クラウド共有を有効にすると、同じチームコードを設定した全員の端末とリアルタイム同期します。
         </p>
       </div>
+    </div>
+  );
+}
+
+// ---- クラウド共有(Firebase Firestore) ----
+function CloudCard() {
+  const { state, dispatch } = useStore();
+  const s = state.settings;
+  const cfgValid = !!parseFirebaseConfig(s.firebaseConfigText);
+  const statusLabel = {
+    off: 'オフ(ローカルのみ)',
+    connecting: '接続中…',
+    on: '✅ 同期中',
+    error: '⚠️ エラー(config/ルール/ネットワークを確認)',
+  }[state.cloudStatus];
+
+  return (
+    <div className="card">
+      <h2>クラウド共有 (Firebase Firestore)</h2>
+      <p className="small dim" style={{ marginBottom: 10 }}>
+        Firebaseコンソールで作ったプロジェクトの構成(firebaseConfig)を貼り付け、
+        チームで共通の「チームコード」を決めて全員が同じ値を入力すると、
+        試合データがリアルタイムで共有されます。未設定でもローカルだけで完全動作します。
+      </p>
+      <label className="small dim">firebaseConfig (JSONまたはコンソールのコピペ)</label>
+      <textarea
+        rows={5}
+        value={s.firebaseConfigText}
+        onChange={(e) => dispatch({ type: 'UPDATE_SETTINGS', patch: { firebaseConfigText: e.target.value } })}
+        placeholder={'{\n  "apiKey": "...",\n  "projectId": "...",\n  ...\n}'}
+      />
+      {s.firebaseConfigText && !cfgValid && <div className="warn-box">⚠️ configを解釈できません(apiKey/projectId必須)。</div>}
+      <label className="small dim mt8" style={{ display: 'block' }}>チームコード(合言葉)</label>
+      <input
+        value={s.teamCode}
+        onChange={(e) => dispatch({ type: 'UPDATE_SETTINGS', patch: { teamCode: e.target.value.trim() } })}
+        placeholder="例: eagles-2026"
+      />
+      <div className="flex mt12">
+        <span className="grow small">状態: {statusLabel}</span>
+        <button
+          className={s.cloudEnabled ? 'danger' : 'primary'}
+          onClick={() => dispatch({ type: 'UPDATE_SETTINGS', patch: { cloudEnabled: !s.cloudEnabled } })}
+          disabled={!s.cloudEnabled && (!cfgValid || !s.teamCode)}
+        >
+          {s.cloudEnabled ? '共有を停止' : '共有を開始'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---- CSV出力・共有 ----
+function ExportCard() {
+  const { state } = useStore();
+  const nameOf = usePlayerName();
+  const [scope, setScope] = useState('all'); // all | current
+  const games =
+    scope === 'current' && state.currentGameId
+      ? [state.games[state.currentGameId]].filter(Boolean)
+      : Object.values(state.games);
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  const items = [
+    { label: '打者成績', make: () => battingCSV(games, nameOf), file: `打者成績_${stamp}.csv` },
+    { label: '投手成績', make: () => pitchingCSV(games, nameOf), file: `投手成績_${stamp}.csv` },
+    { label: 'プレイログ', make: () => playLogCSV(games, nameOf, state.settings.teamName), file: `プレイログ_${stamp}.csv` },
+    { label: '打席詳細', make: () => atBatCSV(games, nameOf), file: `打席詳細_${stamp}.csv` },
+  ];
+
+  return (
+    <div className="card">
+      <h2>CSV出力・共有</h2>
+      <p className="small dim" style={{ marginBottom: 10 }}>
+        ヘッダー付き・1行1レコードのCSV(UTF-8 BOM付き)。ダウンロードして
+        Googleスプレッドシートにインポート/貼り付けできるほか、共有ボタンでLINE等に直接送れます。
+      </p>
+      <div className="toggle-row">
+        <button className={scope === 'all' ? 'active' : ''} onClick={() => setScope('all')}>全試合</button>
+        <button className={scope === 'current' ? 'active' : ''} onClick={() => setScope('current')} disabled={!state.currentGameId}>
+          選択中の試合
+        </button>
+      </div>
+      {items.map((it) => (
+        <div className="row" key={it.label}>
+          <span className="grow">{it.label}</span>
+          <button className="small" onClick={() => downloadCSV(it.file, it.make())}>⬇ DL</button>
+          <button className="small" onClick={() => shareCSV(it.file, it.make(), `${state.settings.teamName} ${it.label}`)}>📤 共有</button>
+        </div>
+      ))}
+      {games.length === 0 && <div className="dim small mt8">出力対象の試合がありません。</div>}
     </div>
   );
 }

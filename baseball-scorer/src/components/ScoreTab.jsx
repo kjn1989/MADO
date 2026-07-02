@@ -75,6 +75,30 @@ function BatterSheet({ game, onClose }) {
   );
 }
 
+// ---- Undoバー(履歴スタック方式: 直前のプレイ入力を1タップ取り消し) ----
+const UNDO_LABELS = {
+  CONFIRM_PLAY: '打席確定',
+  ADD_PITCH: '投球',
+  RUNNER_EVENT: '走者イベント',
+  SUBSTITUTE: '選手交代',
+  SET_PITCHER: '投手交代',
+  FORCE_CHANGE_HALF: 'チェンジ',
+  SET_RUNNER: '走者修正',
+};
+
+function UndoBar({ game }) {
+  const { state, dispatch } = useStore();
+  const last = state.history[state.history.length - 1];
+  if (!last || last.gameId !== game.id) return null;
+  return (
+    <div className="undo-bar">
+      <button onClick={() => dispatch({ type: 'UNDO' })} style={{ flex: 1 }}>
+        ↩ 取り消し: {UNDO_LABELS[last.label] || last.label}
+      </button>
+    </div>
+  );
+}
+
 // ---- メイン ----
 export default function ScoreTab() {
   const { state, dispatch } = useStore();
@@ -177,6 +201,7 @@ export default function ScoreTab() {
         {game.playLogs.length === 0 && <div className="dim small">まだプレイがありません。</div>}
       </div>
 
+      <UndoBar game={game} />
       <VoiceControl game={game} />
 
       {sheet?.kind === 'play' && (

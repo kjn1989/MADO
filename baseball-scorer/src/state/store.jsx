@@ -152,6 +152,18 @@ export function reducer(state, action) {
     }
     case 'SET_CLOUD_STATUS':
       return { ...state, cloudStatus: action.status };
+    case 'MERGE_REMOTE': {
+      // Firestoreからの差分反映: 試合は updatedAt が新しい方を採用(Last-Write-Wins)
+      const games = { ...state.games };
+      for (const g of action.games || []) {
+        const local = games[g.id];
+        if (!local || (g.updatedAt || 0) >= (local.updatedAt || 0)) games[g.id] = g;
+      }
+      const pmap = new Map(state.players.map((p) => [p.id, p]));
+      for (const p of action.players || []) pmap.set(p.id, p);
+      const players = [...pmap.values()].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      return { ...state, games, players };
+    }
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.patch } };
 

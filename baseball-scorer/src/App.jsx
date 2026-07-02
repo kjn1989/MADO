@@ -6,6 +6,7 @@ import OrderTab from './components/OrderTab.jsx';
 import StatsTab from './components/StatsTab.jsx';
 import PitchingTab from './components/PitchingTab.jsx';
 import SettingsTab from './components/SettingsTab.jsx';
+import CloudSync from './components/CloudSync.jsx';
 
 const TABS = [
   { id: 'home', label: 'ホーム', icon: '🏆' },
@@ -24,6 +25,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <CloudSync />
       <header className="app-header">
         <div>
           <h1>⚾ {state.settings.teamName || 'スコアラー'}</h1>
