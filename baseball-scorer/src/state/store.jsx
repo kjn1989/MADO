@@ -441,6 +441,26 @@ export function reducer(state, action) {
       return { ...state, games: { ...state.games, [g.id]: g }, history: pushHistory(state, action) };
     }
 
+    // ===== 手動チェンジ(規定アウト前の攻守交代・修正用) =====
+    case 'FORCE_CHANGE_HALF': {
+      const g = deep(state.games[action.gameId]);
+      g.playLogs.push(newPlayLog({
+        gameId: g.id, inning: g.inning, isTop: g.isTop, kind: 'change',
+        text: 'チェンジ', payload: {},
+      }));
+      changeHalf(g);
+      g.updatedAt = Date.now();
+      return { ...state, games: { ...state.games, [g.id]: g }, history: pushHistory(state, action) };
+    }
+
+    // ===== 走者の手動配置/除去(修正用) =====
+    case 'SET_RUNNER': {
+      const g = deep(state.games[action.gameId]);
+      g.runners[action.base] = action.runner; // { playerId, pitcherId } | null
+      g.updatedAt = Date.now();
+      return { ...state, games: { ...state.games, [g.id]: g }, history: pushHistory(state, action) };
+    }
+
     // ===== Undo =====
     case 'UNDO': {
       const hist = [...state.history];
