@@ -57,6 +57,35 @@ export default function SettingsTab() {
       </div>
 
       <div className="card">
+        <h2>音声入力の設定</h2>
+        <p className="small dim" style={{ marginBottom: 10 }}>
+          音声解釈はオフラインのルールエンジンで動作します。曖昧な発話の解釈精度を上げたい場合のみ、
+          外部LLM API(Anthropic)を任意で連携できます(信頼度が低いときだけ呼び出し)。
+        </p>
+        <div className="flex">
+          <span className="grow small">LLM解釈を有効にする</span>
+          <button
+            className={`small ${state.settings.useLLM ? 'primary' : ''}`}
+            onClick={() => dispatch({ type: 'UPDATE_SETTINGS', patch: { useLLM: !state.settings.useLLM } })}
+          >
+            {state.settings.useLLM ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        {state.settings.useLLM && (
+          <div className="mt8">
+            <label className="small dim">Anthropic APIキー (sk-ant-...)</label>
+            <input
+              type="password"
+              value={state.settings.anthropicApiKey}
+              onChange={(e) => dispatch({ type: 'UPDATE_SETTINGS', patch: { anthropicApiKey: e.target.value } })}
+              placeholder="未入力の場合はオフラインエンジンのみ"
+            />
+            <p className="small dim mt8">⚠️ キーはこの端末のブラウザ内にのみ保存されます。</p>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
         <h2>データ管理</h2>
         <p className="small dim">
           データはこの端末のブラウザ内(localStorage)に自動保存されます。

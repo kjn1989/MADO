@@ -7,6 +7,7 @@ import ResultPad from './ResultPad.jsx';
 import PlaySheet from './PlaySheet.jsx';
 import RunnerEventSheet from './RunnerEventSheet.jsx';
 import Sheet from './Sheet.jsx';
+import VoiceControl from './VoiceControl.jsx';
 import { POSITIONS } from '../lib/model.js';
 
 // ---- 試合セットアップ(試合がない/選択されていないとき) ----
@@ -175,6 +176,8 @@ export default function ScoreTab() {
         ))}
         {game.playLogs.length === 0 && <div className="dim small">まだプレイがありません。</div>}
       </div>
+
+      <VoiceControl game={game} />
 
       {sheet?.kind === 'play' && (
         <PlaySheet
