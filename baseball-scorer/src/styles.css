@@ -181,10 +181,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   aspect-ratio: 10 / 7.2;
 }
 /* 土のひし形: 一辺 = 本塁→一塁の距離 (アスペクト0.72時 ≈ 29.6%W) */
-.field-diamond .bf-dirt { width: 29.6%; }
-.field-diamond .bf-ifgrass { width: 20%; }
+.field-diamond .bf-dirtfan { width: 92%; }
+.field-diamond .bf-basepath { width: 29.6%; }
 .field-diamond .bf-mound { width: 9%; top: 77%; }
-.field-diamond .bf-homec { width: 12%; }
 .base {
   position: absolute;
   width: 48px; height: 48px;
@@ -239,30 +238,31 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
     repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.10) 0 26px, transparent 26px 52px),
     linear-gradient(180deg, #2f7a41 0%, #276b38 60%, #215d30 100%);
 }
-.bf .bf-dirt {
-  position: absolute; left: 50%; top: 72%;
+/* 甲子園スタイル: 内野は全面「黒土」の扇形(本塁中心の円弧・内野芝なし) */
+.bf .bf-dirtfan {
+  position: absolute; left: 50%; top: 101%;
   aspect-ratio: 1;
-  transform: translate(-50%, -50%) rotate(45deg);
-  background: #b08a5d;
-  border-radius: 3%;
-  box-shadow: inset 0 0 0 3px #f2ede4, inset 0 0 30px rgba(120, 85, 50, 0.6);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #85694a 0%, #75593d 55%, #64492f 85%, #573f28 100%);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
 }
-.bf .bf-ifgrass {
+/* ベースパスの白線: 本塁→一塁→二塁→三塁→本塁 を結ぶひし形の輪郭 */
+.bf .bf-basepath {
   position: absolute; left: 50%; top: 72%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%) rotate(45deg);
-  background: linear-gradient(45deg, #2c7440, #256336);
-  border-radius: 4%;
+  border: 3px solid #f2ede4;
+  border-radius: 3%;
+  background: transparent;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
 }
 .bf .bf-mound {
   position: absolute; left: 50%; top: 76%; width: 11%; aspect-ratio: 1;
   transform: translate(-50%, -50%); border-radius: 50%;
-  background: #b08a5d; box-shadow: inset 0 0 0 2px #f2ede4;
-}
-.bf .bf-homec {
-  position: absolute; left: 50%; top: 99%; width: 14%; aspect-ratio: 1;
-  transform: translate(-50%, -50%); border-radius: 50%;
-  background: #b08a5d; box-shadow: inset 0 0 0 2px #f2ede4;
+  background: radial-gradient(circle, #937352, #7a5e40);
+  box-shadow: inset 0 -3px 8px rgba(0, 0, 0, 0.35);
 }
 .bf .bf-line {
   position: absolute; left: 50%; bottom: -1%;
@@ -281,8 +281,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 /* ---- 方向パッド(打球方向選択) ---- */
 .field-pad { display: block; aspect-ratio: 10 / 9.2; }
 /* 土のひし形: 一辺 = 本塁→一塁の距離 (アスペクト0.92時 ≈ 37.8%W) */
-.field-pad .bf-dirt { width: 37.8%; }
-.field-pad .bf-ifgrass { width: 26%; }
+/* 土の扇形の半径: 二塁の少し先まで(直径=116%W) */
+.field-pad .bf-dirtfan { width: 116%; }
+.field-pad .bf-basepath { width: 37.8%; }
 .field-pad button.field-pos {
   position: absolute;
   transform: translate(-50%, -50%);

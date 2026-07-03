@@ -27,12 +27,11 @@ const BASE_MARKS = [
 export default function FieldPad({ value, onChange }) {
   return (
     <div className="dir-pad field-pad bf">
-      <div className="bf-dirt" />
-      <div className="bf-ifgrass" />
+      <div className="bf-dirtfan" />
       <div className="bf-mound" />
-      <div className="bf-homec" />
       <div className="bf-line left" />
       <div className="bf-line right" />
+      <div className="bf-basepath" />
       {BASE_MARKS.map((s, i) => (
         <div key={i} className="bf-base" style={s} />
       ))}
