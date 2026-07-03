@@ -1,7 +1,7 @@
 import React from 'react';
 import { usePlayerName } from '../state/store.jsx';
 
-// 走者ダイヤモンド: リアル風フィールド(芝＋土＋ファウルライン)の上に塁を配置。
+// 走者ダイヤモンド: TV中継風フィールドの上に塁を配置。
 // 塁タップで走者イベントシートを開く。クラス名(.base.b1等)はE2E互換のため維持。
 export default function Diamond({ game, onBaseTap }) {
   const nameOf = usePlayerName();
@@ -13,10 +13,13 @@ export default function Diamond({ game, onBaseTap }) {
   };
 
   return (
-    <div className="field-diamond">
-      <div className="field-dirt fd" />
-      <div className="field-line left" />
-      <div className="field-line right" />
+    <div className="field-diamond bf">
+      <div className="bf-dirt" />
+      <div className="bf-ifgrass" />
+      <div className="bf-mound" />
+      <div className="bf-homec" />
+      <div className="bf-line left" />
+      <div className="bf-line right" />
       {[2, 3, 1].map((b) => (
         <div
           key={b}
