@@ -41,6 +41,9 @@ PREFERRED = ["ja", "en"]
 DEFINITIVE_ERRORS = (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable)
 MAX_RETRIES = 4       # 一時的エラー(レート制限・ネットワーク断)の再試行回数
 BACKOFF_BASE = 5      # 指数バックオフ基準秒(5,10,20,40)
+# 一時的エラーがこの回数連続したら「IPブロック中」とみなし、この回の字幕取得を
+# 打ち切って残りを次回実行に回す(1本ずつ75秒の無駄な再試行を延々続けない)
+MAX_CONSECUTIVE_TRANSIENT = 8
 
 
 def _to_raw(fetched) -> list[dict]:
@@ -113,6 +116,8 @@ def main():
         videos = json.load(f)
 
     ok = skip = none = transient = 0
+    consecutive_transient = 0
+    aborted = False
     for i, v in enumerate(videos, 1):
         vid = v["video_id"]
         path = os.path.join(CAP_DIR, f"{vid}.json")
@@ -122,7 +127,18 @@ def main():
         cap, status = fetch_captions_for(vid)
         if status == "transient":
             transient += 1
+            consecutive_transient += 1
+            if consecutive_transient >= MAX_CONSECUTIVE_TRANSIENT:
+                # IPブロックが本格化している。粘っても1本75秒ずつ浪費するだけなので
+                # この回は打ち切り、残りは次回実行(ブロック解除後)に回す
+                aborted = True
+                remaining = len(videos) - i
+                print(f"\n⚠ 一時的エラーが {consecutive_transient} 本連続しました。"
+                      f"YouTube側のIPブロック中と判断し、字幕取得を今回は打ち切ります"
+                      f"(残り約 {remaining} 本は次回実行で継続)。")
+                break
             continue  # ファイルを書かない = 次回実行で自動的に再取得
+        consecutive_transient = 0
         with open(path, "w", encoding="utf-8") as f:
             json.dump(cap, f, ensure_ascii=False)
         ok += status == "ok"
@@ -133,10 +149,11 @@ def main():
         time.sleep(0.5)  # 礼儀的なレート制御
 
     print(f"完了: 字幕あり{ok} / なし{none} / 一時失敗(未取得){transient} / スキップ{skip}")
-    if transient:
-        print(f"⚠ {transient} 本は一時的エラー(レート制限等)で未取得です。"
-              f"数分〜数十分おいて `python ingestion/fetch_captions.py` を再実行すると、"
-              f"未取得分だけ自動的に取得を試みます。")
+    if aborted or transient:
+        print(f"⚠ 未取得分があります(一時的エラー/IPブロック)。"
+              f"数時間おいて再実行すると、未取得分だけ自動的に取得を試みます。"
+              f"字幕が未取得のままの動画は、いったんタイトル・説明文のみで索引され、"
+              f"後日の再実行で字幕取得に成功すれば次回の索引時に置き換わります。")
 
 
 if __name__ == "__main__":

@@ -35,6 +35,20 @@ def main():
         existing = set(col.get(include=[])["ids"])
     except Exception:
         pass
+
+    # 以前「字幕なし(メタデータのみ)」で索引した動画に後から字幕が取れた場合、
+    # 古い -meta チャンクを索引から削除して字幕チャンクに置き換える
+    vids_with_captions = {
+        c["video_id"] for c in chunks if c["source_type"] != "metadata_only"
+    }
+    stale_meta = [
+        f"{vid}-meta" for vid in vids_with_captions if f"{vid}-meta" in existing
+    ]
+    if stale_meta:
+        col.delete(ids=stale_meta)
+        existing -= set(stale_meta)
+        print(f"字幕取得済みになった {len(stale_meta)} 本の旧メタデータ索引を削除")
+
     todo = [c for c in chunks if c["chunk_id"] not in existing]
     print(f"索引対象 {len(todo)} チャンク(既存 {len(existing)} はスキップ)")
 
