@@ -174,23 +174,41 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .out-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--bg-3); border: 1px solid var(--border); }
 .out-dot.on { background: var(--red); border-color: var(--red); }
 
-/* ---- ダイヤモンド ---- */
-.diamond-wrap { display: flex; justify-content: center; padding: 8px 0; }
-.diamond { position: relative; width: 170px; height: 150px; }
+/* ---- 走者ダイヤモンド(リアル風フィールド) ---- */
+.field-diamond {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 12px;
+  aspect-ratio: 10 / 7.2;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(135% 120% at 50% 100%, transparent 56%, rgba(46, 92, 58, 0.55) 56.5%),
+    linear-gradient(180deg, #16301f 0%, #1d3d28 55%, #24352a 100%);
+}
+/* 内野の土(field-padと共有の .field-dirt をダイヤモンド用に配置調整) */
+.field-diamond .field-dirt.fd {
+  top: 74%;
+  width: 64%;
+}
 .base {
-  position: absolute; width: 44px; height: 44px;
-  transform: rotate(45deg);
-  background: var(--bg-3); border: 2px solid var(--border); border-radius: 7px;
+  position: absolute;
+  width: 48px; height: 48px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: rgba(13, 17, 23, 0.72); border: 2px solid rgba(230, 237, 243, 0.4); border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
-.base.occupied { background: var(--amber); border-color: var(--gold); }
-.base span { transform: rotate(-45deg); font-size: 10px; font-weight: 700; color: var(--text); text-align: center; line-height: 1.1; width: 52px; }
+.base.occupied { background: var(--amber); border-color: var(--gold); box-shadow: 0 0 14px rgba(227, 179, 65, 0.5); }
+.base span { transform: rotate(-45deg); font-size: 10px; font-weight: 700; color: var(--text); text-align: center; line-height: 1.1; width: 56px; }
 .base.occupied span { color: #14100a; }
-.base.b2 { top: 0; left: 63px; }
-.base.b3 { top: 53px; left: 8px; }
-.base.b1 { top: 53px; left: 118px; }
-.base.home { top: 106px; left: 63px; background: var(--bg-2); }
+.base.b2 { left: 50%; top: 28%; }
+.base.b3 { left: 18.5%; top: 74%; }
+.base.b1 { left: 81.5%; top: 74%; }
+.base.home { left: 50%; top: 96%; width: 34px; height: 34px; background: rgba(230, 237, 243, 0.85); border-color: #fff; }
+.base.home span { color: #14100a; font-size: 9px; }
 
 /* ---- 投球カウンター ---- */
 .count-display { display: flex; gap: 14px; justify-content: center; align-items: center; margin: 4px 0 10px; }
@@ -213,6 +231,60 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .result-pad button.sac { border-color: var(--purple); color: var(--purple); }
 .dir-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .dir-pad button { min-height: 50px; font-weight: 700; }
+
+/* ---- フィールド型 方向パッド ---- */
+.field-pad {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 10 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  /* 外野の芝: 扇形のグラデーション */
+  background:
+    radial-gradient(130% 115% at 50% 100%, transparent 55%, rgba(46, 92, 58, 0.55) 55.5%),
+    linear-gradient(180deg, #16301f 0%, #1d3d28 55%, #24352a 100%);
+}
+/* 内野の土(ひし形) */
+.field-dirt {
+  position: absolute;
+  left: 50%; top: 76%;
+  width: 58%; aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: radial-gradient(circle at 50% 50%, #7a5c3e 0%, #6b4f34 70%, #5d442c 100%);
+  border-radius: 10%;
+  box-shadow: inset 0 0 0 2px rgba(230, 237, 243, 0.15);
+}
+/* ファウルライン */
+.field-line {
+  position: absolute;
+  left: 50%; bottom: -2%;
+  width: 2px; height: 120%;
+  background: rgba(230, 237, 243, 0.35);
+  transform-origin: bottom center;
+}
+.field-line.left { transform: rotate(45deg); }
+.field-line.right { transform: rotate(-45deg); }
+/* 守備位置ボタン */
+.field-pad button.field-pos {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-height: 40px;
+  min-width: 58px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 800;
+  background: rgba(13, 17, 23, 0.72);
+  border: 1.5px solid rgba(230, 237, 243, 0.35);
+  border-radius: 999px;
+  backdrop-filter: blur(2px);
+}
+.field-pad button.field-pos.sel {
+  background: var(--accent-2);
+  border-color: #fff;
+  box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.35);
+}
 
 /* ---- モーダル / シート ---- */
 .sheet-overlay {
