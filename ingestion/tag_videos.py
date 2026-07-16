@@ -52,6 +52,10 @@ RATE_KEYS = (
 )
 TAG_RETRIES = 4      # RPM超過などの一時的レート制限の再試行回数
 BACKOFF_BASE = 5     # 指数バックオフ基準秒(5,10,20,40)
+# リクエスト間隔(秒)。無料枠(15RPM)向けの既定4.5秒。
+# 課金を有効にしたAPIキーなら MADO_TAG_INTERVAL=0.5 等に下げると
+# 全件(約3,500本)が数十分で終わる。
+TAG_INTERVAL = float(os.getenv("MADO_TAG_INTERVAL", "4.5"))
 
 
 def _is_rate_error(exc: Exception) -> bool:
@@ -139,7 +143,7 @@ def main(max_per_run: int | None = None):
             print(f"--max-per-run={max_per_run} に到達。途中保存して終了"
                   f"(残り {len(todo) - done} 本は再実行で続行)。")
             return
-        time.sleep(4.5)  # 無料枠 15RPM 対策
+        time.sleep(TAG_INTERVAL)  # 無料枠 15RPM 対策(課金キーなら .env で短縮可)
 
     _save(tags, tags_path)
     print(f"完了 → {tags_path}")

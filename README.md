@@ -87,6 +87,8 @@ python ingestion/recrawl.py        # 新規公開動画のみ処理
 # cron例(毎日4時): 0 4 * * * cd /path/to/mado && .venv/bin/python ingestion/recrawl.py
 ```
 
+> ⚠️ **GitHub Actions(`.github/workflows/ingest.yml`)についての重要な制限**: YouTubeはクラウド事業者のIP(GitHub Actionsを含む)からの**字幕取得をブロック**します。Actionsで動くのはメタデータ収集・タグ付け・索引化のみで、**字幕は「手元のPCでの実行」または「チャンネル所有者のGoogle Takeoutエクスポート → `data/raw/captions/` へ配置」で供給**してください。字幕なしのまま索引された動画は、字幕が供給された後の索引実行で自動的に置き換わります。所有者権限でのYouTube公式API(`captions.download`)による取得に切り替えれば、Actionsでの完全自動化も可能になります(将来拡張)。
+
 ## 4. ローカル起動
 
 ```bash
